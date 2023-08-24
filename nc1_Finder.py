@@ -30,15 +30,12 @@ def process_files():
 
     df = pd.read_excel(excel_file_path)
 
-    if "Piece mark" in df.columns:
+    if "Piece mark" in df.columns and "Quantity" in df.columns:
         column_name = "Piece mark"
-    elif "piece mark" in df.columns:
-        column_name = "piece mark"
+        quantity_column_name = "Quantity"
     else:
-        print("Neither Columns were found")
+        print("Required columns not found")
         return
-
-    missing_nc1_files = []
 
     # Test for file read errors
     for file in os.listdir(directory_var.get()):
@@ -50,8 +47,10 @@ def process_files():
         except:
             print('Error opening file %s' % file)
 
-    # Process .nc1 files
-    for ref_number in df[column_name]:
+    # Copy matching .nc1 files
+    for _, row in df.iterrows():
+        ref_number = row[column_name]
+        quantity = row[quantity_column_name]
         for filename in os.listdir(directory_to_search):
             if filename.lower().endswith('.nc1'):
                 file_last_5_chars = os.path.splitext(filename)[0][-5:]
@@ -60,7 +59,18 @@ def process_files():
                     dest_path = os.path.join(new_folder_path, filename)
                     shutil.copy(source_path, dest_path)
 
+                    # Modify line 8 in the copied .nc1 file
+                    with open(dest_path, 'r') as f:
+                        lines = f.readlines()
+
+                    if len(lines) >= 8:
+                        lines[7] = str(f"  {quantity}\n")  # Lines are 0-indexed
+
+                    with open(dest_path, 'w') as f:
+                        f.writelines(lines)
+
     print("Process Completed!")
+
 
 
 
